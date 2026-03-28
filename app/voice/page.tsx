@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { useConversation } from "@elevenlabs/react";
+import { useConversation } from "@11labs/react";
 
 const N8N_WEBHOOK =
   "https://n8n.srv736612.hstgr.cloud/webhook/Wordpresssessionid";
