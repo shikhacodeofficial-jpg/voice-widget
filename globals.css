@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Transparent so it blends with your WP portal background */
+html, body {
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
