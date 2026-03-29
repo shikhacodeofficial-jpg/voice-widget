@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { useConversation } from "@11labs/react";
+import { useConversation } from "@elevenlabs/react";
 
 const N8N_WEBHOOK =
   "https://n8n.srv736612.hstgr.cloud/webhook/Wordpresssessionid";
@@ -22,7 +22,9 @@ async function sendToWebhook(payload: Record<string, unknown>) {
 
 export default function VoicePage() {
   const startedAtRef = useRef<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "connected" | "sent" | "failed">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "connected" | "sent" | "failed"
+  >("idle");
   const [userId, setUserId] = useState<string>("guest");
 
   // Read userId passed from WP via URL param: ?userId=123
@@ -125,12 +127,26 @@ export default function VoicePage() {
 
       {/* Status badges */}
       {status === "sent" && (
-        <p style={{ color: "#10b981", fontSize: "12px", fontFamily: "monospace", margin: 0 }}>
+        <p
+          style={{
+            color: "#10b981",
+            fontSize: "12px",
+            fontFamily: "monospace",
+            margin: 0,
+          }}
+        >
           ✓ Session saved
         </p>
       )}
       {status === "failed" && (
-        <p style={{ color: "#ef4444", fontSize: "12px", fontFamily: "monospace", margin: 0 }}>
+        <p
+          style={{
+            color: "#ef4444",
+            fontSize: "12px",
+            fontFamily: "monospace",
+            margin: 0,
+          }}
+        >
           ✗ Webhook failed
         </p>
       )}
