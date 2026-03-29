@@ -206,7 +206,9 @@ export default function VoiceWidget() {
       const { signedUrl } = await res.json();
 
       const convId = await conversation.startSession({ signedUrl });
-
+      // Add these debug lines right after:
+      console.log("[widget] convId returned:", convId);
+      console.log("[widget] type:", typeof convId);
       startedAtRef.current = new Date().toISOString();
       setConvId(convId);
       setStatus("connected");
@@ -230,28 +232,39 @@ export default function VoiceWidget() {
     setStatus("disconnecting");
     const endedAt = new Date().toISOString();
 
+    console.log("[widget] endCall fired");
+    console.log("[widget] conversationId:", conversationId);
+    console.log("[widget] userId:", userId);
+    console.log("[widget] startedAt:", startedAtRef.current);
+
     try {
       await conversation.endSession();
-    } catch {}
-
-    if (conversationId) {
-      try {
-        await fetch("/api/end-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId,
-            conversationId,
-            startedAt: startedAtRef.current,
-            endedAt,
-          }),
-        });
-      } catch (err) {
-        console.error("[widget] end-session failed:", err);
-      }
+    } catch (e) {
+      console.log("[widget] endSession error:", e);
     }
 
-    // Notify WP call ended
+    // Always send even if conversationId is null
+    try {
+      const payload = {
+        userId,
+        conversationId: conversationId ?? "unknown",
+        startedAt: startedAtRef.current,
+        endedAt,
+      };
+      console.log("[widget] sending to end-session:", payload);
+
+      const res = await fetch("/api/end-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      console.log("[widget] end-session response:", res.status, res.ok);
+      const resData = await res.json();
+      console.log("[widget] end-session data:", resData);
+    } catch (err) {
+      console.error("[widget] end-session failed:", err);
+    }
+
     postToWP({ type: "call_ended", conversationId, userId, endedAt });
 
     startedAtRef.current = null;
