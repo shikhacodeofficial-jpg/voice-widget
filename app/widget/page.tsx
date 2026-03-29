@@ -1,4 +1,8 @@
-import VoiceWidget from "@/components/VoiceWidget"
+import dynamic from "next/dynamic";
+
+const VoiceWidget = dynamic(() => import("@/components/VoiceWidget"), {
+  ssr: false,
+});
 
 export default function WidgetPage() {
   return (
@@ -7,5 +11,5 @@ export default function WidgetPage() {
         <VoiceWidget />
       </body>
     </html>
-  )
+  );
 }
