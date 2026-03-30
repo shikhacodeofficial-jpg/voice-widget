@@ -259,37 +259,6 @@ export default function VoiceWidget() {
 
         {showChat && (
           <div className="vw-chat">
-            <div className="vw-chat-header">
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {isActive && <span className="vw-chat-header-dot" />}
-                Jamayaai AI
-              </span>
-              <span
-                style={{ cursor: "pointer", fontSize: 14, opacity: 0.4 }}
-                onClick={() => setShowChat(false)}
-              >
-                ✕
-              </span>
-            </div>
-            <div className="vw-messages">
-              {messages.length === 0 ? (
-                <div className="vw-empty">
-                  {status === "connecting"
-                    ? "Connecting…"
-                    : "Say something to start"}
-                </div>
-              ) : (
-                messages.map((m, i) => (
-                  <div key={i} className={`vw-msg ${m.source}`}>
-                    <div className="vw-msg-label">
-                      {m.source === "ai" ? "Jamayaai" : "You"}
-                    </div>
-                    {m.text}
-                  </div>
-                ))
-              )}
-              <div ref={chatEndRef} />
-            </div>
             <div className="vw-chat-footer">
               {isActive && (
                 <button className="vw-end-btn" onClick={endCall}>
