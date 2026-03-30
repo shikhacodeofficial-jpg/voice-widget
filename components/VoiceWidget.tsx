@@ -11,128 +11,32 @@ type Status =
   | "disconnecting"
   | "error";
 
-function PulseOrb({ status }: { status: Status }) {
-  const isActive = status === "connected" || status === "speaking";
-  const isLoading = status === "connecting" || status === "disconnecting";
-
-  return (
-    <div className="orb-container" data-status={status}>
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="orb-ring"
-          style={{
-            animationDelay: `${i * 0.4}s`,
-            animationPlayState: isActive ? "running" : "paused",
-            opacity: isActive ? 1 : 0,
-          }}
-        />
-      ))}
-      <div className={`orb-core ${isLoading ? "orb-spin" : ""}`}>
-        {status === "idle" && (
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
-            <path
-              d="M19 10v1a7 7 0 0 1-14 0v-1"
-              stroke="currentColor"
-              strokeWidth="2"
-              fill="none"
-              strokeLinecap="round"
-            />
-            <line
-              x1="12"
-              y1="19"
-              x2="12"
-              y2="23"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        )}
-        {(status === "connected" || status === "speaking") && (
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <rect x="6" y="9" width="2" height="6" rx="1" />
-            <rect x="10" y="6" width="2" height="12" rx="1" />
-            <rect x="14" y="8" width="2" height="8" rx="1" />
-            <rect x="18" y="10" width="2" height="4" rx="1" />
-          </svg>
-        )}
-        {(status === "connecting" || status === "disconnecting") && (
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-          </svg>
-        )}
-        {status === "error" && (
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const LABEL: Record<Status, string> = {
-  idle: "Tap to talk",
-  connecting: "Connecting…",
-  connected: "Listening",
-  speaking: "Agent speaking",
-  disconnecting: "Ending call…",
-  error: "Error — tap to retry",
-};
-
-// ── Agent keyword → WP div ID map ───────────────────────────────────────────
-// Add all your agents here — key = words AI might say, value = your WP div ID
 const AGENT_KEYWORD_MAP: Record<string, string> = {
-  "super agent": "emp1",
-  "ai super agent": "emp1",
-  chatbox: "emp2",
-  avatar: "emp2",
-  "social media": "emp5",
-  "video creator": "emp4",
+  "super agent": "emp4",
+  "ai super agent": "emp4",
+  chatbox: "emp1",
+  avatar: "emp1",
+  "social media": "emp2",
+  "video creator": "emp3",
   "viral idea": "emp3",
-  "blog manager": "emp6",
-  "scrape manager": "emp7",
-  "google sheet": "emp8",
-  "calendar manager": "emp9",
-  "online sales": "emp10",
-  "email manager": "emp11",
-  telephone: "emp12",
-  "phone salesperson": "emp13",
-  "phone receptionist": "emp14",
-  "phone sales assistant": "emp15",
-  "documents manager": "emp16",
-  "admin assistant": "emp17",
+  "blog manager": "emp5",
+  "scrape manager": "emp6",
+  "google sheet": "emp7",
+  "calendar manager": "emp8",
+  "online sales": "emp9",
+  "email manager": "emp10",
+  telephone: "emp11",
+  "phone salesperson": "emp12",
+  "phone receptionist": "emp13",
+  "phone sales assistant": "emp14",
+  "documents manager": "emp15",
+  "admin assistant": "emp16",
 };
 
-function detectAgentFromMessage(message: string): string | null {
+function detectAgent(message: string): string | null {
   const lower = message.toLowerCase();
-  for (const [keyword, empId] of Object.entries(AGENT_KEYWORD_MAP)) {
-    if (lower.includes(keyword)) return empId;
+  for (const [kw, id] of Object.entries(AGENT_KEYWORD_MAP)) {
+    if (lower.includes(kw)) return id;
   }
   return null;
 }
@@ -147,78 +51,68 @@ export default function VoiceWidget() {
   const [status, setStatus] = useState<Status>("idle");
   const [conversationId, setConvId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [messages, setMessages] = useState<{ source: string; text: string }[]>(
+    [],
+  );
+  const [showChat, setShowChat] = useState(false);
   const startedAtRef = useRef<string | null>(null);
   const lastEmpIdRef = useRef<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // ── Post message to WordPress parent ────────────────────────────────────
+  const isActive = status === "connected" || status === "speaking";
+
   const postToWP = useCallback((payload: Record<string, unknown>) => {
     try {
       window.parent.postMessage(payload, "*");
-    } catch (e) {
-      console.warn("[widget] postMessage failed:", e);
-    }
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const conversation = useConversation({
     onMessage: ({ source, message }: any) => {
+      setMessages((prev) => [...prev, { source, text: message }]);
       if (source === "ai") {
         setStatus("speaking");
-
-        // Send full message to WP for display/logging
         postToWP({ type: "agent_message", source: "ai", message });
-
-        // Detect agent keyword and notify WP to open the right div
-        const empId = detectAgentFromMessage(message);
+        const empId = detectAgent(message);
         if (empId && empId !== lastEmpIdRef.current) {
           lastEmpIdRef.current = empId;
           postToWP({ type: "open_agent", empId });
-          console.log(
-            `[widget] Detected agent: ${empId} from message: "${message}"`,
-          );
         }
       } else {
         setStatus("connected");
         postToWP({ type: "agent_message", source: "user", message });
       }
     },
-    onError: (err: unknown) => {
-      console.error("[widget] error:", err);
+    onError: (err: any) => {
       setErrorMsg(typeof err === "string" ? err : "Connection error");
       setStatus("error");
       postToWP({ type: "call_failed" });
     },
   });
 
-  // ── Start call ───────────────────────────────────────────────────────────
   const startCall = useCallback(async () => {
     setStatus("connecting");
     setErrorMsg(null);
+    setMessages([]);
     lastEmpIdRef.current = null;
-
+    setShowChat(true);
     try {
       const res = await fetch("/api/start-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
       });
-
       if (!res.ok) throw new Error("Failed to get signed URL");
       const { signedUrl } = await res.json();
-
       const convId = await conversation.startSession({ signedUrl });
-      // Add these debug lines right after:
-      console.log("[widget] convId returned:", convId);
-      console.log("[widget] type:", typeof convId);
       startedAtRef.current = new Date().toISOString();
       setConvId(convId);
       setStatus("connected");
-
-      // Notify WP call started
       postToWP({ type: "call_connected", conversationId: convId, userId });
-
-      console.log(
-        `[widget] Started: userId=${userId} conversationId=${convId}`,
-      );
     } catch (err) {
       console.error("[widget] startCall failed:", err);
       setStatus("error");
@@ -227,57 +121,41 @@ export default function VoiceWidget() {
     }
   }, [conversation, userId, postToWP]);
 
-  // ── End call ─────────────────────────────────────────────────────────────
   const endCall = useCallback(async () => {
     setStatus("disconnecting");
     const endedAt = new Date().toISOString();
-
-    console.log("[widget] endCall fired");
-    console.log("[widget] conversationId:", conversationId);
-    console.log("[widget] userId:", userId);
-    console.log("[widget] startedAt:", startedAtRef.current);
-
     try {
       await conversation.endSession();
-    } catch (e) {
-      console.log("[widget] endSession error:", e);
-    }
-
-    // Always send even if conversationId is null
+    } catch {}
     try {
-      const payload = {
-        userId,
-        conversationId: conversationId ?? "unknown",
-        startedAt: startedAtRef.current,
-        endedAt,
-      };
-      console.log("[widget] sending to end-session:", payload);
-
-      const res = await fetch("/api/end-session", {
+      await fetch("/api/end-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          userId,
+          conversationId: conversationId ?? "unknown",
+          startedAt: startedAtRef.current,
+          endedAt,
+        }),
       });
-      console.log("[widget] end-session response:", res.status, res.ok);
-      const resData = await res.json();
-      console.log("[widget] end-session data:", resData);
     } catch (err) {
       console.error("[widget] end-session failed:", err);
     }
-
     postToWP({ type: "call_ended", conversationId, userId, endedAt });
-
     startedAtRef.current = null;
     lastEmpIdRef.current = null;
     setConvId(null);
     setStatus("idle");
   }, [conversation, conversationId, userId, postToWP]);
 
-  const handleToggle = useCallback(() => {
+  const handleAvatarClick = useCallback(() => {
     if (status === "connecting" || status === "disconnecting") return;
-    if (status === "connected" || status === "speaking") endCall();
-    else startCall();
-  }, [status, startCall, endCall]);
+    if (isActive) {
+      setShowChat((prev) => !prev);
+    } else {
+      startCall();
+    }
+  }, [status, isActive, startCall]);
 
   useEffect(() => {
     if (status !== "error") return;
@@ -288,62 +166,144 @@ export default function VoiceWidget() {
     return () => clearTimeout(t);
   }, [status]);
 
-  const isActive = status === "connected" || status === "speaking";
+  const statusColor = isActive
+    ? "#00ffff"
+    : status === "error"
+      ? "#f87171"
+      : "rgba(255,255,255,0.4)";
+
+  const statusLabel =
+    errorMsg ??
+    (status === "idle"
+      ? "Click to talk"
+      : status === "connecting"
+        ? "Connecting…"
+        : status === "connected"
+          ? "Listening…"
+          : status === "speaking"
+            ? "Speaking…"
+            : status === "disconnecting"
+              ? "Ending…"
+              : "Error");
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: transparent; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .widget { font-family: 'DM Mono', monospace; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 36px 28px; background: #0f0f13; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; width: 240px; position: relative; overflow: hidden; }
-        .widget::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 200px; height: 200px; background: radial-gradient(circle, rgba(99,220,190,0.08) 0%, transparent 70%); pointer-events: none; transition: opacity 0.6s ease; opacity: 0; }
-        .widget[data-active="true"]::before { opacity: 1; }
-        .orb-container { position: relative; width: 100px; height: 100px; cursor: pointer; flex-shrink: 0; }
-        .orb-ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid rgba(99,220,190,0.5); animation: ringExpand 2s ease-out infinite; transition: opacity 0.4s; }
-        @keyframes ringExpand { 0% { transform: scale(0.8); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
-        .orb-core { position: absolute; inset: 14px; border-radius: 50%; background: linear-gradient(135deg, #1a1a24, #252535); border: 1.5px solid rgba(99,220,190,0.3); display: flex; align-items: center; justify-content: center; color: #63dcbe; transition: background 0.3s, box-shadow 0.3s, border-color 0.3s; }
-        .orb-container[data-status="connected"] .orb-core, .orb-container[data-status="speaking"] .orb-core { background: linear-gradient(135deg, #0d2420, #163530); border-color: rgba(99,220,190,0.7); box-shadow: 0 0 24px rgba(99,220,190,0.25), inset 0 0 16px rgba(99,220,190,0.05); }
-        .orb-container[data-status="error"] .orb-core { border-color: rgba(248,113,113,0.6); color: #f87171; box-shadow: 0 0 16px rgba(248,113,113,0.2); }
-        .orb-spin { animation: spin 1.2s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .status-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #4a4a60; transition: color 0.3s; text-align: center; }
-        .widget[data-active="true"] .status-label { color: #63dcbe; }
-        .widget[data-status="error"] .status-label { color: #f87171; }
-        .conv-id { font-size: 9px; letter-spacing: 0.05em; color: #2e2e40; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 99px; padding: 3px 10px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .end-btn { all: unset; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #f87171; border: 1px solid rgba(248,113,113,0.2); border-radius: 99px; padding: 5px 16px; transition: background 0.2s; }
-        .end-btn:hover { background: rgba(248,113,113,0.08); }
-        .user-badge { font-size: 9px; color: #2e2e40; letter-spacing: 0.06em; text-transform: uppercase; }
+        html, body { background: transparent; }
+        .vw-root { font-family: 'DM Mono', monospace; display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; min-height: 100vh; padding: 12px 8px; background: transparent; }
+        .vw-avatar-wrap { position: relative; cursor: pointer; width: 140px; height: 140px; flex-shrink: 0; }
+        .vw-avatar-img { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; object-position: top; border: 3px solid transparent; transition: border-color 0.4s, box-shadow 0.4s; display: block; }
+        .vw-avatar-wrap[data-active="true"] .vw-avatar-img { border-color: #00ffff; box-shadow: 0 0 28px rgba(0,255,255,0.55); animation: avatarPulse 2s ease-in-out infinite; }
+        @keyframes avatarPulse { 0%,100%{box-shadow:0 0 20px rgba(0,255,255,0.4)} 50%{box-shadow:0 0 45px rgba(0,255,255,0.8)} }
+        .vw-badge { position: absolute; bottom: 4px; right: 4px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #0f0f13; transition: background 0.3s; font-size: 14px; }
+        .vw-status { margin-top: 8px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; text-align: center; transition: color 0.3s; }
+        .vw-chat { width: 100%; margin-top: 12px; background: rgba(15,15,20,0.95); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; max-height: 340px; }
+        .vw-chat-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+        .vw-chat-header-dot { width: 7px; height: 7px; border-radius: 50%; background: #00ffff; animation: blink 1.4s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        .vw-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+        .vw-msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 12px; line-height: 1.5; word-break: break-word; }
+        .vw-msg.ai { background: rgba(0,255,255,0.08); border: 1px solid rgba(0,255,255,0.15); color: #e0fffe; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .vw-msg.user { background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.25); color: #f0e8ff; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .vw-msg-label { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.45; margin-bottom: 3px; }
+        .vw-empty { text-align: center; color: rgba(255,255,255,0.2); font-size: 11px; padding: 20px; }
+        .vw-chat-footer { padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 8px; align-items: center; }
+        .vw-end-btn { all: unset; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #f87171; border: 1px solid rgba(248,113,113,0.25); border-radius: 99px; padding: 5px 14px; transition: background 0.2s; white-space: nowrap; }
+        .vw-end-btn:hover { background: rgba(248,113,113,0.1); }
+        .vw-conv-id { font-size: 8px; color: rgba(255,255,255,0.15); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
       `}</style>
 
-      <div
-        className="widget"
-        data-active={String(isActive)}
-        data-status={status}
-      >
+      <div className="vw-root">
         <div
-          className="orb-container"
-          data-status={status}
-          onClick={handleToggle}
+          className="vw-avatar-wrap"
+          data-active={String(isActive)}
+          onClick={handleAvatarClick}
           role="button"
-          aria-label={isActive ? "End call" : "Start call"}
+          aria-label={isActive ? "Toggle chat" : "Start call"}
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && handleToggle()}
+          onKeyDown={(e) => e.key === "Enter" && handleAvatarClick()}
         >
-          <PulseOrb status={status} />
+          <img
+            className="vw-avatar-img"
+            src="https://jamayaai.com/wp-content/themes/Theme/templates/images/avatar.png"
+            alt="AI Avatar"
+            onError={(e: any) => {
+              e.target.style.background = "#1a0f2e";
+            }}
+          />
+          <div
+            className="vw-badge"
+            style={{
+              background: isActive
+                ? "#00ffff"
+                : status === "connecting" || status === "disconnecting"
+                  ? "#f59e0b"
+                  : status === "error"
+                    ? "#f87171"
+                    : "rgba(30,30,40,0.9)",
+            }}
+          >
+            {isActive
+              ? "🔴"
+              : status === "connecting" || status === "disconnecting"
+                ? "⏳"
+                : "🎙️"}
+          </div>
         </div>
-        <span className="status-label">{errorMsg ?? LABEL[status]}</span>
-        {conversationId && (
-          <span className="conv-id" title={conversationId}>
-            {conversationId}
-          </span>
+
+        <div className="vw-status" style={{ color: statusColor }}>
+          {statusLabel}
+        </div>
+
+        {showChat && (
+          <div className="vw-chat">
+            <div className="vw-chat-header">
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {isActive && <span className="vw-chat-header-dot" />}
+                Jamayaai AI
+              </span>
+              <span
+                style={{ cursor: "pointer", fontSize: 14, opacity: 0.4 }}
+                onClick={() => setShowChat(false)}
+              >
+                ✕
+              </span>
+            </div>
+            <div className="vw-messages">
+              {messages.length === 0 ? (
+                <div className="vw-empty">
+                  {status === "connecting"
+                    ? "Connecting…"
+                    : "Say something to start"}
+                </div>
+              ) : (
+                messages.map((m, i) => (
+                  <div key={i} className={`vw-msg ${m.source}`}>
+                    <div className="vw-msg-label">
+                      {m.source === "ai" ? "Jamayaai" : "You"}
+                    </div>
+                    {m.text}
+                  </div>
+                ))
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="vw-chat-footer">
+              {isActive && (
+                <button className="vw-end-btn" onClick={endCall}>
+                  End call
+                </button>
+              )}
+              {conversationId && (
+                <span className="vw-conv-id" title={conversationId}>
+                  {conversationId}
+                </span>
+              )}
+            </div>
+          </div>
         )}
-        {isActive && (
-          <button className="end-btn" onClick={endCall}>
-            End call
-          </button>
-        )}
-        <span className="user-badge">uid: {userId}</span>
       </div>
     </>
   );
