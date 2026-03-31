@@ -93,6 +93,7 @@ export default function VoiceWidget() {
       postToWP({ type: "call_failed" });
     },
   });
+  const WP_API = "https://jamayaai.com/wp-json/jamayaai/v1";
 
   const startCall = useCallback(async () => {
     setStatus("connecting");
@@ -100,6 +101,7 @@ export default function VoiceWidget() {
     setMessages([]);
     lastEmpIdRef.current = null;
     setShowChat(true);
+
     try {
       const res = await fetch("/api/start-session", {
         method: "POST",
@@ -112,7 +114,18 @@ export default function VoiceWidget() {
       startedAtRef.current = new Date().toISOString();
       setConvId(convId);
       setStatus("connected");
+
+      // ── Notify WP: call started ──────────────────────
       postToWP({ type: "call_connected", conversationId: convId, userId });
+      fetch(WP_API + "/call-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          conversationId: convId,
+          startedAt: startedAtRef.current,
+        }),
+      }).catch((e) => console.error("[widget] call-start failed:", e));
     } catch (err) {
       console.error("[widget] startCall failed:", err);
       setStatus("error");
@@ -127,6 +140,20 @@ export default function VoiceWidget() {
     try {
       await conversation.endSession();
     } catch {}
+
+    // ── Notify WP: call ended ────────────────────────────
+    fetch(WP_API + "/call-end", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        conversationId: conversationId ?? "unknown",
+        startedAt: startedAtRef.current,
+        endedAt,
+        messageCount: messages.length,
+      }),
+    }).catch((e) => console.error("[widget] call-end failed:", e));
+
     try {
       await fetch("/api/end-session", {
         method: "POST",
@@ -138,15 +165,67 @@ export default function VoiceWidget() {
           endedAt,
         }),
       });
-    } catch (err) {
-      console.error("[widget] end-session failed:", err);
-    }
+    } catch {}
+
     postToWP({ type: "call_ended", conversationId, userId, endedAt });
     startedAtRef.current = null;
     lastEmpIdRef.current = null;
     setConvId(null);
     setStatus("idle");
-  }, [conversation, conversationId, userId, postToWP]);
+  }, [conversation, conversationId, userId, messages.length, postToWP]);
+  // const startCall = useCallback(async () => {
+  //   setStatus("connecting");
+  //   setErrorMsg(null);
+  //   setMessages([]);
+  //   lastEmpIdRef.current = null;
+  //   setShowChat(true);
+  //   try {
+  //     const res = await fetch("/api/start-session", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ userId }),
+  //     });
+  //     if (!res.ok) throw new Error("Failed to get signed URL");
+  //     const { signedUrl } = await res.json();
+  //     const convId = await conversation.startSession({ signedUrl });
+  //     startedAtRef.current = new Date().toISOString();
+  //     setConvId(convId);
+  //     setStatus("connected");
+  //     postToWP({ type: "call_connected", conversationId: convId, userId });
+  //   } catch (err) {
+  //     console.error("[widget] startCall failed:", err);
+  //     setStatus("error");
+  //     setErrorMsg("Could not start session");
+  //     postToWP({ type: "call_failed" });
+  //   }
+  // }, [conversation, userId, postToWP]);
+
+  // const endCall = useCallback(async () => {
+  //   setStatus("disconnecting");
+  //   const endedAt = new Date().toISOString();
+  //   try {
+  //     await conversation.endSession();
+  //   } catch {}
+  //   try {
+  //     await fetch("/api/end-session", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         userId,
+  //         conversationId: conversationId ?? "unknown",
+  //         startedAt: startedAtRef.current,
+  //         endedAt,
+  //       }),
+  //     });
+  //   } catch (err) {
+  //     console.error("[widget] end-session failed:", err);
+  //   }
+  //   postToWP({ type: "call_ended", conversationId, userId, endedAt });
+  //   startedAtRef.current = null;
+  //   lastEmpIdRef.current = null;
+  //   setConvId(null);
+  //   setStatus("idle");
+  // }, [conversation, conversationId, userId, postToWP]);
 
   const handleAvatarClick = useCallback(() => {
     if (status === "connecting" || status === "disconnecting") return;
