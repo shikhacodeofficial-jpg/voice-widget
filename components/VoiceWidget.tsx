@@ -271,7 +271,27 @@ export default function VoiceWidget() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { background: transparent; }
-        .vw-root { font-family: 'DM Mono', monospace; display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; min-height: 100vh; padding: 12px 8px; background: transparent; }
+        /* Replace your existing .vw-root style with this */
+.vw-root {
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    height: 100vh;          
+    padding: 12px 8px;
+    background: transparent;
+    overflow: hidden;        
+}
+
+html, body {
+    background: transparent;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;        
+    height: 100%;
+}
         .vw-avatar-wrap { position: relative; cursor: pointer; width: 140px; height: 140px; flex-shrink: 0; }
         .vw-avatar-img { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; object-position: top; border: 3px solid transparent; transition: border-color 0.4s, box-shadow 0.4s; display: block; }
         .vw-avatar-wrap[data-active="true"] .vw-avatar-img { border-color: #00ffff; box-shadow: 0 0 28px rgba(0,255,255,0.55); animation: avatarPulse 2s ease-in-out infinite; }
@@ -332,10 +352,39 @@ export default function VoiceWidget() {
           </div>
         </div>
 
-        <div className="vw-status" style={{ color: statusColor }}>
-          {statusLabel}
+        <div
+          style={{
+            background: "#e00",
+            color: "#fff",
+            fontFamily: "Arial, sans-serif",
+            fontWeight: "700",
+            fontSize: "16px",
+            lineHeight: "1.4",
+            padding: "10px 18px",
+            borderRadius: "8px",
+            textAlign: "center",
+            width: "140px",
+            marginTop: "8px",
+            cursor: "pointer",
+            userSelect: "none" as const,
+            boxShadow: "0 4px 15px rgba(220,0,0,0.4)",
+          }}
+          onClick={handleAvatarClick}
+        >
+          {isActive ? (
+            <>
+              Click to Stop
+              <br />
+              Talking
+            </>
+          ) : (
+            <>
+              Click to Talk
+              <br />
+              Click to Stop Talking
+            </>
+          )}
         </div>
-
         {showChat && (
           <div className="vw-chat">
             <div className="vw-chat-footer">
