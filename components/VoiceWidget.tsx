@@ -333,22 +333,44 @@ html, body {
             }}
           />
           <div
-            className="vw-badge"
             style={{
-              background: isActive
-                ? "#00ffff"
-                : status === "connecting" || status === "disconnecting"
-                  ? "#f59e0b"
-                  : status === "error"
-                    ? "#f87171"
-                    : "rgba(30,30,40,0.9)",
+              background: "#e00",
+              color: "#fff",
+              fontFamily: "Arial, sans-serif",
+              fontWeight: "700",
+              fontSize: "16px",
+              lineHeight: "1.4",
+              padding: "10px 18px",
+              borderRadius: "8px",
+              textAlign: "center",
+              width: "140px",
+              marginTop: "8px",
+              cursor: "pointer",
+              userSelect: "none" as const,
+              boxShadow: "0 4px 15px rgba(220,0,0,0.4)",
+            }}
+            onClick={() => {
+              if (status === "connecting" || status === "disconnecting") return;
+              if (isActive) {
+                endCall(); // ← directly end the call
+              } else {
+                startCall(); // ← start if idle
+              }
             }}
           >
-            {isActive
-              ? "🔴"
-              : status === "connecting" || status === "disconnecting"
-                ? "⏳"
-                : "🎙️"}
+            {isActive ? (
+              <>
+                Click to Stop
+                <br />
+                Talking
+              </>
+            ) : status === "connecting" ? (
+              <>Connecting…</>
+            ) : status === "disconnecting" ? (
+              <>Ending…</>
+            ) : (
+              <>Click to Talk</>
+            )}
           </div>
         </div>
 
