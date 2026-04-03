@@ -314,7 +314,7 @@ export default function VoiceWidget() {
           />
           <div
             style={{
-              background: "#e00",
+              background: isActive ? "#cc0000" : "#e00",
               color: "#fff",
               fontFamily: "Arial, sans-serif",
               fontWeight: "700",
@@ -338,16 +338,19 @@ export default function VoiceWidget() {
               }
             }}
           >
-            {status === "connecting" && "Connecting…"}
-            {status === "disconnecting" && "Ending…"}
-            {isActive && status !== "disconnecting" && (
+            {status === "connecting" ? (
+              "Connecting…"
+            ) : status === "disconnecting" ? (
+              "Ending…"
+            ) : isActive ? (
               <>
                 Click to Stop
                 <br />
                 Talking
               </>
+            ) : (
+              "Click to Talk"
             )}
-            {!isActive && status !== "connecting" && "Click to Talk"}
           </div>
         </div>
 
