@@ -334,7 +334,7 @@ html, body {
           />
           <div
             style={{
-              background: "#e00",
+              background: isActive ? "#cc0000" : "#e00",
               color: "#fff",
               fontFamily: "Arial, sans-serif",
               fontWeight: "700",
@@ -352,24 +352,24 @@ html, body {
             onClick={() => {
               if (status === "connecting" || status === "disconnecting") return;
               if (isActive) {
-                endCall(); // ← directly end the call
+                endCall();
               } else {
-                startCall(); // ← start if idle
+                startCall();
               }
             }}
           >
-            {isActive ? (
+            {status === "connecting" ? (
+              "Connecting…"
+            ) : status === "disconnecting" ? (
+              "Ending…"
+            ) : isActive ? (
               <>
                 Click to Stop
                 <br />
                 Talking
               </>
-            ) : status === "connecting" ? (
-              <>Connecting…</>
-            ) : status === "disconnecting" ? (
-              <>Ending…</>
             ) : (
-              <>Click to Talk</>
+              "Click to Talk"
             )}
           </div>
         </div>
