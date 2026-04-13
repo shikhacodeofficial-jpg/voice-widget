@@ -42,11 +42,22 @@ function detectAgent(message: string): string | null {
 }
 
 export default function VoiceWidget() {
+  // Replace your existing userId line with this block:
   const userId =
     typeof window !== "undefined"
       ? (new URLSearchParams(window.location.search).get("userId") ??
         "anonymous")
       : "anonymous";
+
+  const isGuest =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("guest") === "1"
+      : true;
+
+  // Pick agent ID based on login status
+  const agentId = isGuest
+    ? process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_GUEST_ID!
+    : process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!;
 
   const [status, setStatus] = useState<Status>("idle");
   const [conversationId, setConvId] = useState<string | null>(null);
@@ -106,7 +117,7 @@ export default function VoiceWidget() {
       const res = await fetch("/api/start-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, agentId }),
       });
       if (!res.ok) throw new Error("Failed to get signed URL");
       const { signedUrl } = await res.json();
