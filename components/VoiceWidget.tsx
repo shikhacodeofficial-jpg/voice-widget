@@ -117,7 +117,7 @@ export default function VoiceWidget() {
       const res = await fetch("/api/start-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, agentId }),
+        body: JSON.stringify({ userId, isGuest }),
       });
       if (!res.ok) throw new Error("Failed to get signed URL");
       const { signedUrl } = await res.json();

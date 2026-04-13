@@ -12,12 +12,16 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, agentId: clientAgentId } = await req.json();
+    const { userId, isGuest } = await req.json();
 
-    // Use client-provided agentId if valid, otherwise fall back to env
-    const agentId =
-      clientAgentId || process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!;
     const apiKey = process.env.ELEVENLABS_API_KEY!;
+
+    // Server-side agent selection — reads env vars correctly
+    const agentId = isGuest
+      ? process.env.ELEVENLABS_AGENT_GUEST_ID! // no NEXT_PUBLIC_ prefix
+      : process.env.ELEVENLABS_AGENT_ID!;
+
+    console.log("[start-session] isGuest:", isGuest, "→ agentId:", agentId);
 
     const elRes = await fetch(
       `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
