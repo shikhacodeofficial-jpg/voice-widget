@@ -16,12 +16,37 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.ELEVENLABS_API_KEY!;
 
-    // Server-side agent selection — reads env vars correctly
-    const agentId = isGuest
-      ? process.env.ELEVENLABS_AGENT_GUEST_ID! // no NEXT_PUBLIC_ prefix
-      : process.env.ELEVENLABS_AGENT_ID!;
+    // Try all possible env var names as fallback
+    const loggedInAgent =
+      process.env.ELEVENLABS_AGENT_ID ||
+      process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID ||
+      "";
 
-    console.log("[start-session] isGuest:", isGuest, "→ agentId:", agentId);
+    const guestAgent =
+      process.env.ELEVENLABS_AGENT_GUEST_ID ||
+      process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_GUEST_ID ||
+      loggedInAgent; // fallback to logged-in agent if guest not set
+
+    const agentId = isGuest ? guestAgent : loggedInAgent;
+
+    // Debug log — check Vercel function logs
+    console.log("[start-session] isGuest:", isGuest);
+    console.log("[start-session] agentId:", agentId);
+    console.log("[start-session] apiKey set:", !!apiKey);
+
+    if (!agentId) {
+      return NextResponse.json(
+        { error: "No agent ID configured" },
+        { status: 500, headers: CORS },
+      );
+    }
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "No API key configured" },
+        { status: 500, headers: CORS },
+      );
+    }
 
     const elRes = await fetch(
       `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
@@ -32,7 +57,7 @@ export async function POST(req: NextRequest) {
       const err = await elRes.text();
       console.error("[start-session] ElevenLabs error:", err);
       return NextResponse.json(
-        { error: "Failed to get signed URL" },
+        { error: "Failed to get signed URL", detail: err },
         { status: 502, headers: CORS },
       );
     }
